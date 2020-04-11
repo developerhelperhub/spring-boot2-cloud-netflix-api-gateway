@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: sales-service
+            
+logging:
+  level:
+    org:
+      springframework: DEBUG
+
+server:
+  port: 8083
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://discovery:discoverypass@localhost:8761/eureka/
