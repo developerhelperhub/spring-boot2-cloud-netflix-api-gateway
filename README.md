@@ -1,13 +1,147 @@
 # Spring Boot 2.2.5 Cloud Discovery Server and its Client
 
-This repository contains the spring boot cloud discovery and its client implementation. This example is continuation of the [Oauth2 Autherization and Resource Servers](https://github.com/developerhelperhub/spring-boot2-oauth2-clients-users-from-db) example. I would suggest, please look previous implementation before looking this source code. In this example I registered the ```resource-service``` under the ```my-cloud-discovery-service```. 
+This repository contains the spring boot cloud netflix api gateway service which is zuul. This example is continuation of the [Cloud Discovery Service](https://github.com/developerhelperhub/spring-boot2-cloud-discovery-and-client) example. I would suggest, please look previous implementation before looking this source code. In this example, I added the three services are ```api-gateway-service```, ```inventory-service``` and ```sales-service```. 
 
-This repository contains five maven project. 
+This repository contains seven maven project. 
 * my-cloud-service: Its main module, it contains the dependecy management of our application.
 * my-cloud-discovery-service: This is the server for the discovery service.
 * identity-service: This authentication server service. 
 * client-application-service: This client application for authentication server.
-* resource-service: This resource server to provide the resource services for our application.
+* inventory-service: This is one of the microservice which is called inventory service to manage the inventory in the project.
+* sales-service: This is one of the microservice which is called sales service to manage the point of sales in the project.
+
+We need to create two microservices are ```inventory-service``` and ```sales-service``` before creating the API gateway. 
+
+### Adding the inventory-service
+We create the ```inventory-service``` as resource server under the ```identity-service``` and client service under the ```my-cloud-discovery-service```. 
+
+In the main class InventoryServiceApplication is enabling discovery client:
+```java
+package com.developerhelperhub.ms.id;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class InventoryServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(InventoryServiceApplication.class, args);
+	}
+
+}
+```
+
+In the resource server configuration ```ResourceServerConfig```, we are using the same code of previous example, but only change is that, we have to maintain the unique resoure id for this service and authority of the endpoints. Below I added codes only the changes in the previous example.
+```java
+
+        private static final String RESOURCE_ID = "inventory_service_resource_id";
+	
+	@Override
+	public void configure(HttpSecurity http) throws Exception {
+		http.anonymous().disable().authorizeRequests().antMatchers("/**").access("hasRole('USER')").and()
+				.exceptionHandling().accessDeniedHandler(new OAuth2AccessDeniedHandler());
+	}
+```
+
+Added the new controller class is InventoryController:
+```java
+package com.developerhelperhub.ms.id.controller;
+
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class InventoryController {
+
+	@RequestMapping(value = "/items", method = RequestMethod.GET)
+	public String items() {
+		return "list of items";
+	}
+
+	@RequestMapping(value = "/items", method = RequestMethod.POST)
+	public String addItem() {
+		return "added item";
+	}
+
+	@RequestMapping(value = "/items/{id}", method = RequestMethod.GET)
+	public String getItem(@PathVariable(value = "id") Long id) {
+		return "get item by " + id;
+	}
+}
+```
+
+In the YAML file we have change on the application name and port
+```yml
+spring:
+  application:
+    name: inventory-service
+
+server:
+  port: 8084
+
+```
+
+*Note:* When we will create each new microservice is mandatory as resource server as well as discovery client. 
+
+### Adding the sales-service
+In the same code changes of ```inventory-service``` are using in the ```sales-service```. So I am just adding the code only in this service.
+
+In the resource server configuration ```ResourceServerConfig```:
+```java
+
+        private static final String RESOURCE_ID = "sales_service_resource_id";
+	
+	@Override
+	public void configure(HttpSecurity http) throws Exception {
+		http.anonymous().disable().authorizeRequests().antMatchers("/**").access("hasRole('USER')").and()
+				.exceptionHandling().accessDeniedHandler(new OAuth2AccessDeniedHandler());
+	}
+```
+
+Added the new controller class is InventoryController:
+```java
+package com.developerhelperhub.ms.id.controller;
+
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class SalesController {
+
+	@RequestMapping(value = "/items", method = RequestMethod.GET)
+	public String items() {
+		return "list of items";
+	}
+
+	@RequestMapping(value = "/items", method = RequestMethod.POST)
+	public String addItem() {
+		return "added item";
+	}
+
+	@RequestMapping(value = "/items/{id}", method = RequestMethod.GET)
+	public String getItem(@PathVariable(value = "id") Long id) {
+		return "get item by " + id;
+	}
+}
+```
+
+In the YAML file we have change on the application name and port
+```yml
+spring:
+  application:
+    name: sales-service
+
+server:
+  port: 8083
+
+```
 
 ### Adding the my-cloud-discovery-service
 This service is the discovery service of all services and it helps to identify the servics are currently running in which ip address and its port. I am seeing the major advantage of discovery service is that, In the spring boot, we can use the spring boot application name for communicating in other service like "http://resource-service/user" instead of hard coding the ip address. This helps our application can be moved one cloud to another cloud with minimum change. 
